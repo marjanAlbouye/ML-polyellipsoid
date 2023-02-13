@@ -7,6 +7,7 @@ from mbuild.formats.hoomd_forcefield import to_hoomdsnapshot
 import hoomd
 import numpy as np
 
+from customForce import EllipsCustomForce
 
 class Simulation:
     """Simulation initialization class.
@@ -64,9 +65,15 @@ class Simulation:
             seed=21,
             gsd_write=1e4,
             log_write=1e3,
+            best_model_path=None,
+            hidden_dim=256,
+            n_layers=5,
+            act_fn="ReLU",
+            log_path=""
     ):
         self.system = system
         self._dt = dt
+        self.log_path = log_path
         # Snapshot with rigid center placeholders, no toplogy information
         init_snap = create_rigid_snapshot(system.mb_system)
         # Use GMSO to populate angle information before making snapshot
@@ -100,13 +107,20 @@ class Simulation:
         self.sim.create_state_from_snapshot(self.snapshot)
         self.forcefield = []
         # Set up forces, GB pair, harmonic bonds and angles:
-        nl = hoomd.md.nlist.Cell(buffer=0.40)
-        gb = hoomd.md.pair.aniso.GayBerne(nlist=nl, default_r_cut=r_cut)
-        gb.params[('R', 'R')] = dict(epsilon=epsilon, lperp=lperp, lpar=lpar)
-        zero_pairs = [('A','A'), ('B','B'), ('A','B'), ('A','R'), ('B','R')]
-        for pair in zero_pairs:
-            gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
-        self.forcefield.append(gb)
+        # nl = hoomd.md.nlist.Cell(buffer=0.40)
+        # gb = hoomd.md.pair.aniso.GayBerne(nlist=nl, default_r_cut=r_cut)
+        # gb.params[('R', 'R')] = dict(epsilon=epsilon, lperp=lperp, lpar=lpar)
+        # zero_pairs = [('A','A'), ('B','B'), ('A','B'), ('A','R'), ('B','R')]
+        # for pair in zero_pairs:
+        #     gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
+        # self.forcefield.append(gb)
+        with open(os.path.join(ml_model_dir, 'stats.pkl'), 'rb') as fp:
+            target_stats = pickle.load(fp)
+        rigid_ids = np.where(self.snapshot.particles.typeid == 0)[0]
+        custom_force = EllipsCustomForce(rigid_ids=rigid_ids, model_path=best_model_path, in_dim=7,
+                                         hidden_dim=hidden_dim, out_dim=3,
+                                         n_layers=n_layers, act_fn=act_fn)
+        self.forcefield.append(custom_force)
 
         harmonic_bond = hoomd.md.bond.Harmonic()
         harmonic_bond.params["A-A"] = dict(
@@ -327,7 +341,7 @@ class Simulation:
         """Creates gsd and log writers"""
         writemode = "w"
         gsd_writer = hoomd.write.GSD(
-                filename="sim_traj.gsd",
+                filename=self.log_path + "sim_traj.gsd",
                 trigger=hoomd.trigger.Periodic(int(self.gsd_write)),
                 mode=f"{writemode}b",
                 dynamic=["momentum"]
@@ -342,7 +356,7 @@ class Simulation:
             logger.add(f, quantities=["energy"])
 
         table_file = hoomd.write.Table(
-            output=open("sim_traj.txt", mode=f"{writemode}", newline="\n"),
+            output=open(self.log_path+"sim_traj.txt", mode=f"{writemode}", newline="\n"),
             trigger=hoomd.trigger.Periodic(period=int(self.log_write)),
             logger=logger,
             max_header_len=None,
