@@ -114,8 +114,6 @@ class Simulation:
         # for pair in zero_pairs:
         #     gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
         # self.forcefield.append(gb)
-        with open(os.path.join(ml_model_dir, 'stats.pkl'), 'rb') as fp:
-            target_stats = pickle.load(fp)
         rigid_ids = np.where(self.snapshot.particles.typeid == 0)[0]
         custom_force = EllipsCustomForce(rigid_ids=rigid_ids, model_path=best_model_path, in_dim=7,
                                          hidden_dim=hidden_dim, out_dim=3,
