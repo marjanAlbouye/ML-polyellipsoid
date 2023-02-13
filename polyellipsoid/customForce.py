@@ -1,5 +1,5 @@
 import torch.nn as nn
-
+import hoomd
 
 class NN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, n_layers, act_fn="ReLU"):

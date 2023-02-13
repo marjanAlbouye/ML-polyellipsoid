@@ -7,7 +7,7 @@ from mbuild.formats.hoomd_forcefield import to_hoomdsnapshot
 import hoomd
 import numpy as np
 
-from customForce import EllipsCustomForce
+from polyellipsoid.customForce import EllipsCustomForce
 
 class Simulation:
     """Simulation initialization class.
