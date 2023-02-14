@@ -1,5 +1,7 @@
 import torch.nn as nn
 import hoomd
+import torch
+import numpy as np
 
 class NN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, n_layers, act_fn="ReLU"):
@@ -56,12 +58,12 @@ class EllipsCustomForce(hoomd.md.force.Custom):
         predicted_force = force_prediction.cpu().detach().numpy()
         predicted_torque = torque_prediction.cpu().detach().numpy()
         with self.cpu_local_force_arrays as arrays:
-            # print('****************************************')
-            # print('timestep: ', timestep)
-            # print('predicted force: ', predicted_force)
-            # print('predicted torque: ', predicted_torque)
-            # arrays.force[self.rigid_ids] = predicted_force
-            # arrays.torque[self.rigid_ids] = predicted_torque
+            #print('****************************************')
+            #print('timestep: ', timestep)
+            #print('predicted force: ', predicted_force)
+            #print('predicted torque: ', predicted_torque)
+            arrays.force[self.rigid_ids] = predicted_force
+            arrays.torque[self.rigid_ids] = predicted_torque
 
-            arrays.force[rigid_rtags] = predicted_force
-            arrays.torque[rigid_rtags] = predicted_torque
+            #arrays.force[rigid_rtags] = predicted_force
+            #arrays.torque[rigid_rtags] = predicted_torque
